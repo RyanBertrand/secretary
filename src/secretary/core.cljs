@@ -326,7 +326,7 @@
 (defn invalid-params [params validations]
   (reduce (fn [m [key validation]]
             (let [value (get params key)]
-              (if (re-matches validation value)
+              (if (and (not= nil value) (re-matches validation value))
                 m
                 (assoc m key [value validation]))))
           {} (partition 2 validations)))
