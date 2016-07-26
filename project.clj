@@ -1,6 +1,6 @@
-(defproject secretary "1.2.4-SNAPSHOT"
+(defproject org.clojars.kubo/secretary "1.2.5"
   :description "A client-side router for ClojureScript."
-  :url "https://github.com/gf3/secretary"
+  :url "https://github.com/ryanbertrand/secretary"
   :license {:name "Eclipse Public License - v 1.0"
             :url "http://www.eclipse.org/legal/epl-v10.html"
             :distribution :repo
