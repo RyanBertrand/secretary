@@ -42,35 +42,35 @@
 
 (defmulti
   ^{:private true
-    :doc "Given a key and a value return and encoded key-value pair."}
+    :doc     "Given a key and a value return and encoded key-value pair."}
   encode-pair
   (fn [[k v]]
     (cond
-     (or (sequential? v) (set? v))
-     ::sequential
-     (or (map? v) (satisfies? IRecord v))
-     ::map)))
+      (or (sequential? v) (set? v))
+      ::sequential
+      (or (map? v) (satisfies? IRecord v))
+      ::map)))
 
 (defn- key-index
   ([k] (str (name k) "[]"))
   ([k index]
-     (str (name k) "[" index "]")))
+   (str (name k) "[" index "]")))
 
 (defmethod encode-pair ::sequential [[k v]]
   (let [encoded (map-indexed
-                 (fn [i x]
-                   (let [pair (if (coll? x)
-                                [(key-index k i) x]
-                                [(key-index k) x])]
-                     (encode-pair pair)))
-                 v)]
+                  (fn [i x]
+                    (let [pair (if (coll? x)
+                                 [(key-index k i) x]
+                                 [(key-index k) x])]
+                      (encode-pair pair)))
+                  v)]
     (string/join \& encoded)))
 
 (defmethod encode-pair ::map [[k v]]
   (let [encoded (map
-                 (fn [[ik iv]]
-                   (encode-pair [(key-index k (name ik)) iv]))
-                 v)]
+                  (fn [[ik iv]]
+                    (encode-pair [(key-index k (name ik)) iv]))
+                  v)]
     (string/join \& encoded)))
 
 (defmethod encode-pair :default [[k v]]
@@ -98,15 +98,15 @@
   index value is empty 0 is returned, if it's a digit it returns the
   js/parseInt value, otherwise it returns the extracted index."
   [path]
-  (let [index-re #"\[([^\]]*)\]*" ;; Capture the index value.
+  (let [index-re #"\[([^\]]*)\]*"                           ;; Capture the index value.
         parts (re-seq index-re path)]
     (map
-     (fn [[_ part]]
-       (cond
-        (empty? part) 0
-        (re-matches #"\d+" part) (js/parseInt part)
-        :else part))
-     parts)))
+      (fn [[_ part]]
+        (cond
+          (empty? part) 0
+          (re-matches #"\d+" part) (js/parseInt part)
+          :else part))
+      parts)))
 
 (defn- key-parse
   "Return a key path for a serialized query-string entry.
@@ -136,18 +136,18 @@
   [m path v]
   (let [heads (fn [xs]
                 (map-indexed
-                 (fn [i _]
-                   (take (inc i) xs))
-                 xs))
+                  (fn [i _]
+                    (take (inc i) xs))
+                  xs))
         hs (heads path)
         m (reduce
-           (fn [m h]
-             (if (and (or (number? (last h)))
-                      (not (vector? (get-in m (butlast h)))))
-               (assoc-in m (butlast h) [])
-               m))
-           m
-           hs)]
+            (fn [m h]
+              (if (and (or (number? (last h)))
+                       (not (vector? (get-in m (butlast h)))))
+                (assoc-in m (butlast h) [])
+                m))
+            m
+            hs)]
     (if (zero? (last path))
       (update-in m (butlast path) conj v)
       (assoc-in m path v))))
@@ -157,13 +157,13 @@
   [query-string]
   (let [parts (string/split query-string #"&")
         params (reduce
-                (fn [m part]
-                  ;; We only want two parts since the part on the right hand side
-                  ;; could potentially contain an =.
-                  (let [[k v] (string/split part #"=" 2)]
-                    (assoc-in-query-params m (key-parse k) (decode v))))
-                {}
-                parts)
+                 (fn [m part]
+                   ;; We only want two parts since the part on the right hand side
+                   ;; could potentially contain an =.
+                   (let [[k v] (string/split part #"=" 2)]
+                     (assoc-in-query-params m (key-parse k) (decode v))))
+                 {}
+                 parts)
         params (keywordize-keys params)]
     params))
 
@@ -188,13 +188,13 @@
   (set "\\.*+|?()[]{}$^"))
 
 (defn- re-escape [s]
- (reduce
-  (fn [s c]
-    (if (re-escape-chars c)
-      (str s \\ c)
-      (str s c)))
-  ""
-  s))
+  (reduce
+    (fn [s c]
+      (if (re-escape-chars c)
+        (str s \\ c)
+        (str s c)))
+    ""
+    s))
 
 (defn- lex*
   "Attempt to lex a single token from s with clauses. Each clause is a
@@ -204,10 +204,10 @@
   is returned. Otherwise the result is nil."
   [s clauses]
   (some
-   (fn [[re action]]
-     (when-let [[m c] (re-find re s)]
-       [(subs s (count m)) (action c)]))
-   clauses))
+    (fn [[re action]]
+      (when-let [[m c] (re-find re s)]
+        [(subs s (count m)) (action c)]))
+    clauses))
 
 (defn- lex-route
   "Return a pair of [regex params]. regex is a compiled regular
@@ -223,33 +223,33 @@
 (defn- compile-route
   "Given a route return an instance of IRouteMatches."
   [orig-route]
-  (let [clauses [[#"^\*([^\s.:*/]*)" ;; Splats, named splates
+  (let [clauses [[#"^\*([^\s.:*/]*)"                        ;; Splats, named splates
                   (fn [v]
                     (let [r "(.*?)"
                           p (if (seq v)
                               (keyword v)
                               :*)]
                       [r p]))]
-                 [#"^\:([^\s.:*/]+)" ;; Params
+                 [#"^\:([^\s.:*/]+)"                        ;; Params
                   (fn [v]
                     (let [r "([^,;?/]+)"
                           p (keyword v)]
                       [r p]))]
-                 [#"^([^:*]+)" ;; Literals
+                 [#"^([^:*]+)"                              ;; Literals
                   (fn [v]
                     (let [r (re-escape v)]
                       [r]))]]
-       [re params] (lex-route orig-route clauses)]
-   (reify
-     IRouteValue
-     (route-value [this] orig-route)
+        [re params] (lex-route orig-route clauses)]
+    (reify
+      IRouteValue
+      (route-value [this] orig-route)
 
-     IRouteMatches
-     (route-matches [_ route]
-       (when-let [[_ & ms] (re-matches* re route)]
-         (->> (interleave params (map decode ms))
-              (partition 2)
-              (merge-with vector {})))))))
+      IRouteMatches
+      (route-matches [_ route]
+        (when-let [[_ & ms] (re-matches* re route)]
+          (->> (interleave params (map decode ms))
+               (partition 2)
+               (merge-with vector {})))))))
 
 ;;----------------------------------------------------------------------
 ;; Route rendering
@@ -274,9 +274,9 @@
   (swap! *routes*
          (fn [rs]
            (filterv
-            (fn [[x _]]
-              (not= x obj))
-            rs))))
+             (fn [[x _]]
+               (not= x obj))
+             rs))))
 
 (defn reset-routes! []
   (reset! *routes* []))
@@ -286,10 +286,10 @@
 
 (defn locate-route [route]
   (some
-   (fn [[compiled-route action]]
-     (when-let [params (route-matches compiled-route route)]
-       {:action action :params params :route compiled-route}))
-   @*routes*))
+    (fn [[compiled-route action]]
+      (when-let [params (route-matches compiled-route route)]
+        {:action action :params params :route compiled-route}))
+    @*routes*))
 
 (defn locate-route-value
   "Returns original route value as set in defroute when passed a URI path."
@@ -311,16 +311,23 @@
     uri
     (str "/" uri)))
 
+(defn- parse-uri [uri]
+  (let [match (first (re-seq #"([^#?]+)(\?[^#]*)?(#.*)?" uri))]
+    (when match
+      (concat
+        [(second match)]
+        (map #(when-let [sec (nth match %)] (subs sec 1)) [2 3])))))
+
 (defn dispatch!
   "Dispatch an action for a given route if it matches the URI path."
   [uri]
-  (let [[uri-path query-string] (string/split (uri-without-prefix uri) #"\?")
+  (let [[uri-path query-string fragment] (parse-uri (uri-without-prefix uri))
         uri-path (uri-with-leading-slash uri-path)
         query-params (when query-string
                        {:query-params (decode-query-params query-string)})
         {:keys [action params]} (locate-route uri-path)
         action (or action identity)
-        params (merge params query-params)]
+        params (merge params query-params (when fragment {:fragment fragment}))]
     (action params)))
 
 (defn invalid-params [params validations]
@@ -369,34 +376,36 @@
   string
   (render-route
     ([this]
-       (render-route this {}))
+     (render-route this {}))
     ([this params]
-       (let [{:keys [query-params] :as m} params
-             a (atom m)
-             path (.replace this (js/RegExp. ":[^\\s.:*/]+|\\*[^\\s.:*/]*" "g")
-                            (fn [$1]
-                              (let [lookup (keyword (if (= $1 "*")
-                                                      $1
-                                                      (subs $1 1)))
-                                    v (get @a lookup)
-                                    replacement (if (sequential? v)
-                                                  (do
-                                                    (swap! a assoc lookup (next v))
-                                                    (encode-uri (first v)))
-                                                  (if v (encode-uri v) $1))]
-                                replacement)))
-             path (str (get-config [:prefix]) path)]
-         (if-let [query-string (and query-params
-                                    (encode-query-params query-params))]
-           (str path "?" query-string)
-           path))))
+     (let [{:keys [query-params fragment] :as m} params
+           a (atom m)
+           path (.replace this (js/RegExp. ":[^\\s.:*/]+|\\*[^\\s.:*/]*" "g")
+                          (fn [$1]
+                            (let [lookup (keyword (if (= $1 "*")
+                                                    $1
+                                                    (subs $1 1)))
+                                  v (get @a lookup)
+                                  replacement (if (sequential? v)
+                                                (do
+                                                  (swap! a assoc lookup (next v))
+                                                  (encode-uri (first v)))
+                                                (if v (encode-uri v) $1))]
+                              replacement)))
+           path (str (get-config [:prefix]) path)]
+       (str path
+            (when-let [query-string (and query-params
+                                         (encode-query-params query-params))]
+              (str "?" query-string))
+            (when fragment
+              (str "#" fragment))))))
 
   cljs.core/PersistentVector
   (render-route
     ([this]
-       (render-route this {}))
+     (render-route this {}))
     ([[route-string & validations] params]
-       (let [invalid (invalid-params params validations)]
-         (if (empty? invalid)
-           (render-route route-string params)
-           (throw (ex-info "Could not build route: invalid params" invalid)))))))
+     (let [invalid (invalid-params params validations)]
+       (if (empty? invalid)
+         (render-route route-string params)
+         (throw (ex-info "Could not build route: invalid params" invalid)))))))

@@ -1,10 +1,11 @@
-(defproject org.clojars.kubo/secretary "1.2.5"
+(defproject ryanbertrand/secretary "1.2.7"
   :description "A client-side router for ClojureScript."
   :url "https://github.com/ryanbertrand/secretary"
   :license {:name "Eclipse Public License - v 1.0"
             :url "http://www.eclipse.org/legal/epl-v10.html"
             :distribution :repo
             :comments "same as Clojure"}
+  :deploy-repositories [["clojars" {:sign-releases false}]]
 
   :dependencies
   [[org.clojure/clojure "1.6.0"]
